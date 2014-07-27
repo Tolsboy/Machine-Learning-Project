@@ -1,0 +1,72 @@
+# Maching learning project
+
+
+## Data Processing
+
+Loading file:
+```{r}
+library(lattice)
+library(ggplot2)
+library(caret)
+read.csv("pml-testing.csv") -> testing
+read.csv("pml-training.csv") -> training
+set.seed(10968086)
+createFolds(y=training$classe, k=10, list = TRUE, returnTrain=FALSE) -> folds
+```
+
+Remove variables with too many NA:
+```{r}
+nofnas <- matrix(1, ncol=1, nrow=dim(training)[2])
+for (i in 1:length(nofnas)){nofnas[i]<-sum(is.na(training[,i]))}
+training <- training[,nofnas==0]
+testing <- testing[,nofnas==0]
+```
+
+Remove the first 7 useless information data:
+```{r}
+training <- training[,8:dim(training)[2]]
+testing <- testing[,8:dim(testing)[2]]
+```
+
+Remove highly correlated variables:
+```{r}
+nofnas <- matrix(1, ncol=1, nrow=dim(training)[2])
+for (i in 1:length(nofnas)){nofnas[i]<-sum(is.na(training[,i]))}
+training <- training[,nofnas==0]
+testing <- testing[,nofnas==0]
+cor(training[,-dim(training)[2]])->corM
+inx <- c()
+for (i in 1:(dim(corM)[2]-1)){
+  if (!(i %in% inx)){
+    for (j in (i+1):dim(corM)[2]){
+      if (corM[j,i]>0.7){inx <- c(inx, j)}
+    }
+  }
+}
+training <- training[,-inx]
+testing <- testing[,-inx]
+```
+
+Apply random forest method on 90% of the training data and exame the prediction using the rest 10%:
+```{r}
+training[-folds$Fold01,]->ttrain
+modfit <- train(as.factor(classe) ~., data=ttrain, method='rf')
+pred <- predict(modfit, tt)
+sum(pred==tt$classe)/dim(tt)[1]#good enough
+```
+
+Predict the testing data:
+```{r}
+pred <- predict(modfit, testing)
+
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+
+pml_write_files(pred)
+```
+
